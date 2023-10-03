@@ -1,0 +1,13 @@
+**/__pycache__
+**/venv
+**/.env
+**/.project
+**/.settings
+**/.toolstarget
+**/.vs
+**/.vscode
+**/*.*proj.user
+**/*.dbmdl
+**/*.jfm
+**/secrets.dev.yaml
+
