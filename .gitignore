@@ -10,4 +10,4 @@
 **/*.dbmdl
 **/*.jfm
 **/secrets.dev.yaml
-
+**/.pytest_cache
