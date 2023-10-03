@@ -20,11 +20,7 @@ class IsAdminUserOrIsAuthenticatedReadOnly(permissions.BasePermission):
         ):
             return True
 
-        if (
-            request.method == "PUT"
-            and request.user.is_authenticated
-            and request.user.is_admin
-        ):
+        if request.method == "PUT" and request.user.is_authenticated:
             return True
 
         return False

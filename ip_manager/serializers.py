@@ -28,8 +28,8 @@ class IPTableSerializerGet(IPTableSerializerCreate):
 
 
 class AllocatedIPSerializerCreate(serializers.Serializer):
-    customer_name = serializers.CharField(max_length=50, required=False)
-    email = serializers.EmailField(required=False)
+    customer_name = serializers.CharField(max_length=50, required=True)
+    email = serializers.EmailField(required=True)
 
     class Meta:
         fields = ("email", "customer_name")

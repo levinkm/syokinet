@@ -28,9 +28,9 @@ from drf_yasg import openapi
 
 schema_view = get_schema_view(
     openapi.Info(
-        title="Kiosk API",
+        title="SYOKINET API",
         default_version="v1",
-        description="This is an API for Kiosk app. It is a backend challange given by savannah infomatics",
+        description="""This is an API for SYOKINET. It is a backend challange given by SYOKINET.\n\n For you to use this API you need to first login. You can do that using the user login route(user/login). If not yet a user please register using the user register route(user/register).\n\n After successful login you will get both `access` and `refresh` token. You will need the `access` token for **Authorization**\n\nIf using curl or any other tool make sure to pass `Authorization` as a header with a value of the Bearers token e.g \n\n ```curl -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjk2MzY5MTc2LCJpYXQiOjE2OTYzNjE5NzYsImp" http://127.0.0.1:8000/ip/allocated\?start_ip\="59.0.153.18"\&\&end_ip\="60.50.10.0"``` """,
         terms_of_service="https://www.yourapp.com/terms/",
         contact=openapi.Contact(email="levinmutai@gmail.com"),
         license=openapi.License(name="MIT"),
@@ -40,7 +40,7 @@ schema_view = get_schema_view(
 )
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("user/login/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
+    path("user/login", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("ip/", include("ip_manager.urls")),
     path("user/", include("accounts.urls")),
@@ -52,5 +52,12 @@ urlpatterns = [
     re_path(
         r"^redoc/$", schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"
     ),
-    path("", include_docs_urls(title="SYOKINET API")),
+    path(
+        "",
+        include_docs_urls(
+            title="SYOKINET API",
+            description="""This is an API for SYOKINET. It is a backend challange given by SYOKINET. \n\n For you to use this API you need to first login. You can do that using the user login route(user/login). If not yet a user please register using the user register route(user/register).\n\n After successful login you will get both `access` and `refresh` token. You will need the `access` token to access any route in this API.\n\n To do that, copy the `access` token obtained, then click on `Authenticatiion` on the left bottom of the screen then select `token` then paste the token on the **Token** field and on **Scheme** please use 'Bearer' then click on **USe Token Authentication** and just like that you can test the endpoinps!\n\nIf using curl or any other tool make sure to pass `Authorization` as a header with a value of the Bearers token e.g \n\n ```curl -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjk2MzY5MTc2LCJpYXQiOjE2OTYzNjE5NzYsImp" http://127.0.0.1:8000/ip/allocated\?start_ip\="59.0.153.18"\&\&end_ip\="60.50.10.0"```\n\n**Note:** If you prefer *swagger* for documentation please head to `/swagger` and `/redoc` for *redoc*.
+                """,
+        ),
+    ),
 ]

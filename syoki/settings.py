@@ -72,6 +72,13 @@ ALLOWED_HOSTS = ["0.0.0.0", "127.0.0.1"]
 
 AUTH_USER_MODEL = "accounts.User"
 
+LOGIN_URL = "/user/login"
+
+SWAGGER_SETTINGS = {
+    "SECURITY_DEFINITIONS": {
+        "api_key": {"type": "apiKey", "in": "header", "name": "Authorization"}
+    }
+}
 # Application definition
 
 INSTALLED_APPS = [

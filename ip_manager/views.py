@@ -22,6 +22,8 @@ from rest_framework.permissions import (
 from django.utils.decorators import method_decorator
 from accounts.models import User
 from django.core.exceptions import ValidationError
+from .filters import filter_ip_range
+from django.db.models import Q
 
 # Create your views here.
 
@@ -72,8 +74,15 @@ class IPTableViewSet(viewsets.ModelViewSet):
 
     @method_decorator(cache_page(60 * 15, key_prefix="IP_LISTS"))
     def list(self, request, *args, **kwargs):
-        """Lists all IPs in the system. It also allows look up by range using path parameters"""
-        # TODO: filtering all allocated IPs by range
+        """Lists all IPs in the system"""
+        start_ip = kwargs.get("start_ip")
+        end_ip = kwargs.get("end_ip")
+        print(start_ip, end_ip)
+        if start_ip and end_ip:
+            all = IPTable.objects.filter(ip__gte=start_ip).filter(ip__lte=end_ip)
+            print(all)
+
+            return response.Response(IPTableSerializerGet(all, many=True).data)
         serializer = IPTableSerializerGet(self.queryset, many=True)
         return response.Response(serializer.data)
 
@@ -164,7 +173,25 @@ class AllocatedIPViewSet(viewsets.ModelViewSet):
             return response.Response(str(e), status=status.HTTP_400_BAD_REQUEST)
 
     def list(self, request, *args, **kwargs):
-        """Used to list all allocated IPs in the system"""
+        """Used to list all allocated IPs in the system. This route also does range fltering of allocated IPs. one has to pass `start_ap` and end `end_aip` as their parameters
+
+        ###Example
+        `http://000000000:8000/api/v1/allocated_ips?start_ip=00000000000&end_ip=00000000000`
+
+
+
+        """
+        start_ip = self.request.query_params.get("start_ip")
+        end_ip = self.request.query_params.get("end_ip")
+        params = kwargs.get("params")
+        print(start_ip, end_ip)
+        if start_ip and end_ip:
+            all = AllocatedIP.objects.filter(ip__ip__gte=start_ip).filter(
+                ip__ip__lte=end_ip
+            )
+
+            return response.Response(AllocatedIPSerializerDetails(all, many=True).data)
+
         serializer = AllocatedIPSerializerDetails(self.queryset, many=True)
         return response.Response(serializer.data)
 
