@@ -1,5 +1,7 @@
 from django.db import models
 import uuid
+from accounts.models import User
+
 
 class BaseModel(models.Model):
     id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4)
@@ -9,48 +11,49 @@ class BaseModel(models.Model):
     class Meta:
         abstract = True
 
-class IPTable(BaseModel):
 
+class IPTable(BaseModel):
     STATUS_CHOICES = (
-        ('allocated', 'allocated'),
-        ('availble', 'Availble'),
-        ('reserved', 'Reserved'),
+        ("allocated", "allocated"),
+        ("available", "available"),
+        ("reserved", "reserved"),
     )
 
-    ip = models.IPAddressField(unique=True, null=False, blank=False)
-    status = models.CharField(max_length=20,choices = STATUS_CHOICES,default='availble')
+    ip = models.GenericIPAddressField(unique=True, null=False, blank=False)
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default="available"
+    )
 
     @property
     def allocate(self):
-        return self.status == 'allocated'
+        return self.status == "allocated"
+
     @property
     def release(self):
         try:
-           if self.status == 'available':
-               return "IP is not allocated"
-           
-           allocatedip = AllocatedIP.objects.get(ip=self)
-           allocatedip.delete()
-           self.status = 'available'
-           self.save()
+            if self.status == "available":
+                return "IP is not allocated hence no need to release"
 
-           return "IP has been released"
+            allocatedip = AllocatedIP.objects.get(ip=self)
+            allocatedip.delete()
+            self.status = "available"
+            self.save()
+
+            return "IP has been released"
         except AllocatedIP.DoesNotExist:
             return AllocatedIP.DoesNotExist(f"IP {self} is not allocated")
-        
+
         except Exception as e:
             return e
 
+
 class AllocatedIP(BaseModel):
     ip = models.ForeignKey(IPTable, on_delete=models.CASCADE)
-    customer = models.ForeignKey('User', on_delete=models.CASCADE)
+    customer = models.ForeignKey(User, on_delete=models.CASCADE)
 
     class Meta:
-        unique_together = ('ip', 'customer')
-        verbose_name_plural = 'Allocated IP'
-
+        unique_together = ("ip", "customer")
+        verbose_name_plural = "Allocated IP"
 
     def __str__(self):
-        return self.ip.ip 
-
-
+        return self.ip.ip

@@ -3,18 +3,26 @@ from django.shortcuts import render
 from .models import IPTable, AllocatedIP
 from rest_framework import status, viewsets, request, response, pagination
 from .serializers import (
+    AllocatedIPSerializerDetails,
     IPTableSerializerCreate,
     IPTableSerializerGet,
     IPTableSerializerUpdate,
     AllocatedIPSerializerCreate,
-    AllocatedIPSerializerGet,
-    AllocatedIPSerializerUpdate
+    AlllocatedIPSerializerGet,
+    AllocatedIPSerializerUpdate,
 )
 from django.views.decorators.cache import cache_page
 from syoki.permisions import IsAdminUserOrIsAuthenticatedReadOnly
-from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser, IsAuthenticatedOrReadOnly, IsAdmin
+from rest_framework.permissions import (
+    IsAuthenticated,
+    AllowAny,
+    IsAdminUser,
+    IsAuthenticatedOrReadOnly,
+)
 from django.utils.decorators import method_decorator
 from accounts.models import User
+from django.core.exceptions import ValidationError
+
 # Create your views here.
 
 
@@ -28,49 +36,77 @@ class LargePagination(pagination.PageNumberPagination):
 
 class IPTableViewSet(viewsets.ModelViewSet):
     queryset = IPTable.objects.all()
-    serializer_class = IPTableSerializerCreate
+    # serializer_class = IPTableSerializerCreate
     permission_classes = [IsAdminUserOrIsAuthenticatedReadOnly]
     pagination_class = LargePagination
+
+    def get_serializer_class(self):
+        if (
+            self.action == "list"
+            or self.action == "retrieve"
+            or self.action == "list_available"
+        ):
+            return IPTableSerializerGet
+        elif self.action == "create":
+            return IPTableSerializerCreate
+        elif self.action == "release" or self.action == "update":
+            return IPTableSerializerUpdate
+        else:
+            return IPTableSerializerCreate
+
+    def list_available(self, request, *args, **kwargs):
+        """Lists all IPs with status of  "available". Takes no parameter or request body"""
+        ip = IPTable.objects.filter(status="available")
+        serializer = IPTableSerializerGet(ip, many=True)
+
+        return response.Response(serializer.data)
 
     def create(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
-        return response.Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        return response.Response(
+            serializer.data, status=status.HTTP_201_CREATED, headers=headers
+        )
 
     @method_decorator(cache_page(60 * 15, key_prefix="IP_LISTS"))
     def list(self, request, *args, **kwargs):
+        """Lists all IPs in the system. It also allows look up by range using path parameters"""
         # TODO: filtering all allocated IPs by range
         serializer = IPTableSerializerGet(self.queryset, many=True)
         return response.Response(serializer.data)
 
-    def retrieve(self, request, pk=None,  *args, **kwargs):
+    def retrieve(self, request, pk=None, *args, **kwargs):
+        """Used to retrieve details of an IP using its ID"""
         instance = self.get_object()
         serializer = IPTableSerializerGet(instance)
         return response.Response(serializer.data)
 
-    def update(self, request, ip_address=None, *args, **kwargs):
-
+    def release(self, request, ip_address=None, *args, **kwargs):
+        """Used to release Id allocated to a given customer. Takes the IP as a path parameter and returns a string as a message"""
         instance = IPTable.objects.get(ip=ip_address)
 
         try:
-            if instance.status == "allocated":
-                raise ValueError("IP is already allocated")
+            if instance.status == "available":
+                raise ValueError("IP is already released")
             resp = instance.release
 
             return response.Response(resp, status=status.HTTP_200_OK)
 
         except IPTable.DoesNotExist:
-            return response.Response("IP does not exist", status=status.HTTP_404_NOT_FOUND)
+            return response.Response(
+                "IP does not exist", status=status.HTTP_404_NOT_FOUND
+            )
 
         except ValueError as e:
-            return response.Response(e, status=status.HTTP_404_NOT_FOUND)
+            return response.Response(e.args[0], status=status.HTTP_404_NOT_FOUND)
 
         except Exception:
             return response.Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def destroy(self, request, pk=None, *args, **kwargs):
+        """Used to delete an IP from the system. Only users with Admin Previlages can delete"""
         instance = self.get_object()
         self.perform_destroy(instance)
         return response.Response(status=status.HTTP_204_NO_CONTENT)
@@ -81,18 +117,13 @@ class AllocatedIPViewSet(viewsets.ModelViewSet):
     serializer_class = AllocatedIPSerializerCreate
     permission_classes = [IsAdminUserOrIsAuthenticatedReadOnly]
 
-    def list_available(self, request, *args, **kwargs):
-        ip = IPTable.objects.filter(status="available")
-        serializer = IPTableSerializerGet(ip, many=True)
-
-        return response.Response(serializer.data)
-
     def create(self, request, *args, **kwargs):
+        """Used to allocate IP to a Customer. Takes a customername and an email. Returns IP details allocated to the user"""
         serializer = self.serializer_class(data=request.data)
 
         try:
             serializer.is_valid(raise_exception=True)
-            customer = User.objects.get(email=request.data['email'])
+            customer = User.objects.get(email=request.data["email"])
 
             # get a random IP
             ip = IPTable.objects.filter(status="available")
@@ -109,39 +140,47 @@ class AllocatedIPViewSet(viewsets.ModelViewSet):
             inst = AllocatedIP.objects.create(customer=customer, ip=random_ip)
 
             # update the status of the IP
-            ip.status = "allocated"
-            ip.save()
+            random_ip.status = "allocated"
+            random_ip.save()
 
-            return response.Response(AllocatedIPSerializerGet(inst).data, status=status.HTTP_201_CREATED)
+            return response.Response(
+                IPTableSerializerCreate(random_ip).data, status=status.HTTP_201_CREATED
+            )
 
-        except serializer.ValidationError as e:
+        except ValidationError as e:
             return response.Response(e, status=status.HTTP_400_BAD_REQUEST)
 
         except ValueError as e:
-            return response.Response(e, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return response.Response(
+                e.args[0], status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
         except User.DoesNotExist:
-            return response.Response("Customer does not exist", status=status.HTTP_400_BAD_REQUEST)
+            return response.Response(
+                "Customer does not exist", status=status.HTTP_400_BAD_REQUEST
+            )
 
         except Exception as e:
-
-            return response.Response(status=status.HTTP_400_BAD_REQUEST)
+            return response.Response(str(e), status=status.HTTP_400_BAD_REQUEST)
 
     def list(self, request, *args, **kwargs):
-
-        serializer = AllocatedIPSerializerGet(self.queryset, many=True)
+        """Used to list all allocated IPs in the system"""
+        serializer = AllocatedIPSerializerDetails(self.queryset, many=True)
         return response.Response(serializer.data)
 
-    def retrieve(self, request, pk=None,  *args, **kwargs):
+    def retrieve(self, request, pk=None, *args, **kwargs):
+        """Used to retrieve a Details of a single IP using their ID"""
         instance = self.get_object()
-        serializer = AllocatedIPSerializerGet(instance)
+        serializer = AlllocatedIPSerializerGet(instance)
         return response.Response(serializer.data)
 
     def update(self, request, pk=None, *args, **kwargs):
+        """Used to update an allocated IP"""
         partial = True
         instance = self.get_object()
         serializer = AllocatedIPSerializerUpdate(
-            instance, data=request.data, partial=partial)
+            instance, data=request.data, partial=partial
+        )
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
         return response.Response(serializer.data)

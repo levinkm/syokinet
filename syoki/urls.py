@@ -15,17 +15,42 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, re_path
 from django.urls import include
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
+from rest_framework import permissions
+from drf_yasg.views import get_schema_view
+from rest_framework.documentation import include_docs_urls
+from drf_yasg import openapi
 
+schema_view = get_schema_view(
+    openapi.Info(
+        title="Kiosk API",
+        default_version="v1",
+        description="This is an API for Kiosk app. It is a backend challange given by savannah infomatics",
+        terms_of_service="https://www.yourapp.com/terms/",
+        contact=openapi.Contact(email="levinmutai@gmail.com"),
+        license=openapi.License(name="MIT"),
+    ),
+    public=True,
+    permission_classes=(permissions.AllowAny,),
+)
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
+    path("user/login/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("ip/", include("ip_manager.urls")),
     path("user/", include("accounts.urls")),
+    path(
+        "swagger",
+        schema_view.with_ui("swagger", cache_timeout=0),
+        name="schema-swagger-ui",
+    ),
+    re_path(
+        r"^redoc/$", schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"
+    ),
+    path("", include_docs_urls(title="SYOKINET API")),
 ]

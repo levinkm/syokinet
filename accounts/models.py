@@ -45,7 +45,6 @@ class User(AbstractBaseUser):
     email = models.EmailField(verbose_name="email", max_length=80, unique=True)
     username = models.CharField(unique=True, max_length=50)
     customer_name = models.CharField(unique=True, max_length=50)
-    picture = models.ImageField(upload_to="Landlords", null=True, blank=True)
     is_email_verified = models.BooleanField(default=False)
     date_joined = models.DateTimeField(verbose_name="date joined", auto_now_add=True)
     last_login = models.DateTimeField(verbose_name="last login", auto_now=True)
@@ -56,7 +55,7 @@ class User(AbstractBaseUser):
     is_landlord = models.BooleanField(default=False)
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["email", "customer_name"]
+    REQUIRED_FIELDS = ["username", "customer_name"]
 
     objects = myAccountManager()
 
