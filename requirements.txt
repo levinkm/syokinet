@@ -17,13 +17,8 @@ cron-descriptor==1.4.0
 cryptography==41.0.3
 Deprecated==1.2.14
 Django==4.2.5
-django-celery-beat==2.5.0
-django-celery-results==2.5.1
 django-cors-headers==4.2.0
 django-filter==23.2
-django-oauth-toolkit==2.3.0
-django-oidc-auth==0.0.5
-django-oidc-provider==0.8.0
 django-timezone-field==6.0.1
 djangorestframework==3.14.0
 drf-yasg==1.21.7
@@ -53,6 +48,7 @@ pytest-django==4.5.2
 python-crontab==3.0.0
 python-dateutil==2.8.2
 python-decouple==3.8
+psycopg2-binary==2.9.3
 pytz==2023.3.post1
 PyYAML==6.0.1
 requests==2.31.0

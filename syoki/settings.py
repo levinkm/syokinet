@@ -138,7 +138,6 @@ REST_FRAMEWORK = {
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-print(ENVIRONMENT)
 
 if ENVIRONMENT == "develop":
     DATABASES = {
@@ -156,8 +155,8 @@ elif ENVIRONMENT == "PRODUCTION":
             "NAME": config("POSTGRES_DB"),
             "USER": config("POSTGRES_USER"),
             "PASSWORD": config("POSTGRES_PASSWORD"),
-            "HOST": config("DB_HOST"),
-            "PORT": config("DB_PORT"),
+            "HOST": "syokinet_db",
+            "PORT": "5432",
         }
     }
 
